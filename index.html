@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remember Me - 24H 歷史時間軸系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #050811; color: #E0E0E0; }
+        .serif-font { font-family: 'Noto Serif TC', serif; }
+        .neon-glow { box-shadow: 0 0 30px rgba(34, 211, 238, 0.3); border-color: rgba(34, 211, 238, 0.5); }
+        .bg-cyber { background: radial-gradient(circle at top, #0f1a30 0%, #050811 100%); }
+        .live-dot { animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+        /* 時間軸滑桿美化 */
+        input[type="range"] { -webkit-appearance: none; background: #1e293b; border-radius: 9999px; width: 100%; height: 6px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #22d3ee; cursor: pointer; box-shadow: 0 0 10px #22d3ee; }
+    </style>
+</head>
+<body class="bg-cyber flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-sm bg-slate-900/95 rounded-[40px] p-6 border-2 neon-glow relative overflow-hidden">
+        
+        <div class="flex justify-between items-center text-[10px] text-cyan-400/80 tracking-widest uppercase mb-4">
+            <span class="flex items-center gap-1">
+                <span class="w-2 h-2 bg-emerald-400 rounded-full live-dot"></span>
+                <span id="stream-title">Remember Me 實時通話流</span>
+            </span>
+            <span id="time-display">00:00:00</span>
+        </div>
+
+        <div class="w-full bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 aspect-[3/4] relative flex flex-col justify-between p-4 shadow-2xl">
+            
+            <div class="flex justify-between items-start w-full z-10">
+                <div class="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 max-w-[80%]">
+                    <p id="pet-name" class="text-[11px] font-bold text-white tracking-wide">陳小晃 (Lucky)</p>
+                    <p id="current-habit" class="text-[9px] text-cyan-400">🐾 正在讀取歷史生命軸...</p>
+                </div>
+                <span id="mode-badge" class="bg-emerald-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">LIVE</span>
+            </div>
+
+            <div class="absolute inset-0 z-0 flex items-center justify-center">
+                <model-viewer 
+                    id="pet-model"
+                    src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Fox/glTF-Binary/Fox.glb" 
+                    alt="Remember Me 3D 還原分身"
+                    camera-controls
+                    touch-action="pan-y"
+                    autoplay
+                    animation-name="Survey"
+                    shadow-intensity="1"
+                    camera-orbit="0deg 75deg 2.5m"
+                    class="w-full h-full bg-transparent">
+                </model-viewer>
+            </div>
+
+            <div class="w-full flex justify-center gap-6 z-10">
+                <button onclick="triggerCall()" class="px-8 py-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-bold text-xs tracking-widest flex items-center gap-1 shadow-lg shadow-cyan-500/20 transition">
+                    📞 呼喚 Lucky
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-5 bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+            <div class="flex justify-between items-center mb-1">
+                <label class="text-[11px] font-bold text-slate-400 tracking-wider">📊 過去 24 小時生活日誌</label>
+                <span id="timeline-hour-txt" class="text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/30">現在（LIVE）</span>
+            </div>
+            <input type="range" id="time-slider" min="-96" max="0" value="0" class="my-2" oninput="handleSliderChange(this.value)">
+            <div class="flex justify-between text-[8px] text-slate-600 mt-0.5 tracking-tighter">
+                <span>-24 小時前</span>
+                <span>-12 小時前</span>
+                <span>現在時間</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <p class="serif-font text-[11px] italic text-slate-400 tracking-wider">「死亡不是終點，被遺忘了才是」</p>
+        </div>
+    </div>
+
+    <script>
+        const model = document.getElementById('pet-model');
+        const habitText = document.getElementById('current-habit');
+        const sliderHourTxt = document.getElementById('timeline-hour-txt');
+        const modeBadge = document.getElementById('mode-badge');
+        
+        let isManualMode = false;
+
+        function initSystem() {
+            // 每秒刷新即時時間顯示
+            setInterval(() => {
+                if (!isManualMode) {
+                    const now = new Date();
+                    document.getElementById('time-display').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    evaluateBehaviorByTime(now.getHours(), now.getMinutes());
+                }
+            }, 1000);
+            
+            const now = new Date();
+            evaluateBehaviorByTime(now.getHours(), now.getMinutes());
+        }
+
+        // 24小時預設作息與強烈視覺差異化演算法（補齊完整大腦）
+        function evaluateBehaviorByTime(hour, min) {
+            const quarter = Math.floor(min / 15) * 15;
+            const timeStr = `${hour < 10 ? '0'+hour : hour}:${quarter === 0 ? '00' : quarter}`;
+
+            // 預設關閉自動旋轉，由各時段獨立控制
+            model.autoRotate = false;
+
+            // 1. 深夜熟睡期 (00:00 - 06:00) -> 視覺特點：完全靜止不轉、鏡頭拉近低頭俯瞰睡姿
+            if (hour >= 0 && hour < 6) {
+                habitText.innerText = `🌙 [${timeStr}] 深夜熟睡：Lucky 正在毯子裡沉沉睡去，動也不動。`;
+                model.animationName = "Survey"; 
+                model.cameraOrbit = "45deg 80deg 2.2m"; 
+            } 
+            // 2. 早晨甦醒與進食 (06:00 - 08:59) -> 視覺特點：開啟慢走、慢速圍繞自轉
+            else if (hour >= 6 && hour < 9) {
+                habitText.innerText = `⏰ [${timeStr}] 晨間作息：Lucky 睡醒了，正在客廳裡悠閒地踱步、巡邏飯碗...`;
+                model.animationName = "Walk"; 
+                model.autoRotate = true;
+                model.setAttribute('rotation-speed', '1.5r/min'); 
+                model.cameraOrbit = "0deg 75deg 2.5m";
+            } 
+            // 3. 上午獨自待機打瞌睡 (09:00 - 11:59) -> 視覺特點：靜止、換角度看窗外背影
+            else if (hour >= 9 && hour < 12) {
+                habitText.innerText = `☀️ [${timeStr}] 上午小憩：家裡沒人，Lucky 正靜靜趴在陽光灑落的窗邊放空。`;
+                model.animationName = "Survey"; 
+                model.cameraOrbit = "135deg 75deg 2.5m"; 
+            } 
+            // 4. 中午飯後散步 (12:00 - 13:59) -> 視覺特點：慢走、中速旋轉
+            else if (hour >= 12 && hour < 14) {
+                habitText.innerText = `🍲 [${timeStr}] 中午放風：Lucky 吃完午餐，在客廳四周開心地小步散步。`;
+                model.animationName = "Walk"; 
+                model.autoRotate = true;
+                model.setAttribute('rotation-speed', '3r/min');
+                model.cameraOrbit = "0deg 75deg 2.5m";
+            } 
+            // 5. 下午黃金狂歡玩耍期 (14:00 - 16:59) -> 視覺特點：切換至奔跑(Run)！開啟 18 倍速暴風狂旋轉，動態視覺超明顯！
+            else if (hour >= 14 && hour < 17) {
+                habitText.innerText = `⚡ [${timeStr}] 下午瘋狂玩耍：Lucky 精神超級好！正在房間瘋狂奔跑追玩具！`;
+                model.animationName = "Run"; 
+                model.autoRotate = true;
+                model.setAttribute('rotation-speed', '15r/min'); // 狂暴自轉，營造極大動態差異
+                model.cameraOrbit = "0deg 70deg 2.8m"; 
+            } 
+            // 6. 傍晚死守大門口 (17:00 - 18:59) -> 視覺特點：靜止、正對鏡頭定格眼神專注
+            else if (hour >= 17 && hour < 19) {
+                habitText.innerText = `🚪 [${timeStr}] 傍晚守候：Lucky 坐在玄關，豎起耳朵、四處張望等爸爸媽媽下班。`;
+                model.animationName = "Survey"; 
+                model.cameraOrbit = "0deg 75deg 2.4m"; 
+            } 
+            // 7. 晚上家人陪伴與客廳時光 (19:00 - 21:59) -> 視覺特點：開心地慢走、中速自轉
+            else if (hour >= 19 && hour < 22) {
+                habitText.innerText = `🛋️ [${timeStr}] 夜間客廳：客廳有人，Lucky 開心地在大家腳邊來回散步、討摸摸。`;
+                model.animationName = "Walk"; 
+                model.autoRotate = true;
+                model.setAttribute('rotation-speed', '4r/min');
+                model.cameraOrbit = "90deg 75deg 2.5m";
+            } 
+            // 8. 深夜睡前放空打瞌睡 (22:00 - 23:59) -> 視覺特點：靜止低頭
+            else {
+                habitText.innerText = `🌙 [${timeStr}] 入夜睏倦：燈關了，Lucky 昏昏欲睡地趴在沙發腳邊，準備睡覺。`;
+                model.animationName = "Survey"; 
+                model.cameraOrbit = "-45deg 80deg 2.3m";
+            }
+
+            // 【終極靈魂除錯線】每次拉動，強制 3D 播放器從第 0 秒重刷渲染，徹底破除網頁死機 Bug！
+            model.currentTime = 0;
+            if (model.paused) model.play();
+        }
+
+        // 15分鐘一格的逆向時間軸滑動（手指往左拉，負數變小，精準回溯過去）
+        function handleSliderChange(val) {
+            const stepsBack = parseInt(val); // 0 代表現在，-4代表倒退1小時，-96代表倒退24小時
+            
+            if (stepsBack === 0) {
+                isManualMode = false;
+                sliderHourTxt.innerText = "現在（LIVE）";
+                sliderHourTxt.className = "text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/30";
+                modeBadge.innerText = "LIVE";
+                modeBadge.className = "bg-emerald-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider";
+                
+                const now = new Date();
+                evaluateBehaviorByTime(now.getHours(), now.getMinutes());
+            } else {
+                isManualMode = true;
+                const targetTime = new Date();
+                // 加上負數，精確完成往過去時間倒退的習慣！
+                targetTime.setMinutes(targetTime.getMinutes() + (stepsBack * 15));
+                
+                // 定格顯示被倒退的歷史整點時間
+                document.getElementById('time-display').innerText = targetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'00'});
+                
+                const totalMinsBack = Math.abs(stepsBack * 15);
+                const hrs = Math.floor(totalMinsBack / 60);
+                const mns = totalMinsBack % 60;
+                sliderHourTxt.innerText = `歷史紀錄: -${hrs}小時${mns}分`;
+                sliderHourTxt.className = "text-[10px] text-amber-400 font-bold bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/30";
+                
+                modeBadge.innerText = "LOG";
+                modeBadge.className = "bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider";
+                
+                // 呼叫定錨演算法刷新動作
+                evaluateBehaviorByTime(targetTime.getHours(), targetTime.getMinutes());
+            }
+        }
+
+        // 📞 呼喚 Lucky：瞬間急煞定格、正面 1.8 米黃金焦點大特寫、原地抬頭張望叫兩聲 (Survey)
+        function triggerCall() {
+            isManualMode = true; 
+            habitText.innerText = '📞 視訊已接通 ‧ Lucky 聽到了爸爸的聲音！立刻停下動作，正原地抬頭對你叫了兩聲！';
+            
+            model.animationName = "Survey";        // 原地抬頭
+            model.autoRotate = false;              // 熄火不旋轉
+            model.cameraOrbit = "0deg 75deg 1.8m"; // 正面超級大特寫
+
+            model.currentTime = 0;
+            if (model.paused) model.play();
+
+            const audio = new Audio('https://www.w3schools.com/html/horse.mp3');
+            audio.play().catch(e => console.log("聲音解鎖"));
+        }
+
+        window.onload = initSystem;
+    </script>
+</body>
+</html>
