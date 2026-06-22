@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remember Me - 24H 實時生命日誌系統 (終極穩定版)</title>
+    <title>Remember Me - 24H 實時生命日誌系統</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
@@ -36,16 +36,16 @@
             <div class="flex justify-between items-start w-full z-10">
                 <div class="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 max-w-[80%]">
                     <p id="pet-name" class="text-[11px] font-bold text-white tracking-wide">陳小晃 (Lucky)</p>
-                    <p id="current-habit" class="text-[9px] text-cyan-400">🐾 正在載入實時生命軸...</p>
+                    <p id="current-habit" class="text-[9px] text-cyan-400">🐾 正在連線實時日誌...</p>
                 </div>
                 <span id="mode-badge" class="bg-emerald-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">LIVE</span>
             </div>
 
             <div class="absolute inset-0 z-0 flex items-center justify-center">
-               <model-viewer 
-    id="pet-model"
-    src="mycat.glb" 
-    alt="Remember Me 3D 還原分身"
+                <model-viewer 
+                    id="pet-model"
+                    src="mycat.glb" 
+                    alt="Remember Me 3D 還原分身"
                     camera-controls
                     touch-action="pan-y"
                     autoplay
@@ -88,71 +88,59 @@
         const modeBadge = document.getElementById('mode-badge');
         
         let isManualMode = false;
-        let lastRenderedHour = -1; // 效能保護鎖
 
-        // 🧠 24小時獨立行為數據庫（修復了所有會導致崩潰的單位，全面採用標準 deg/sec）
+        // 🧠 24小時生活行為日誌資料庫
         const hourConfigs = [
-            { text: "🌙 [{time}] 深度熟睡：縮在毯子深處香甜做夢...", anim: "Survey", orbit: "45deg 85deg 2.0m", rot: false },
+            { text: "🌙 [{time}] 深度熟睡：Lucky 縮在毯子深處香甜做夢...", anim: "Survey", orbit: "45deg 85deg 2.0m", rot: false },
             { text: "🌙 [{time}] 沉睡做夢：小肉墊輕微抖動，夢到在抓蝴蝶...", anim: "Survey", orbit: "90deg 85deg 1.9m", rot: false },
             { text: "🌙 [{time}] 側躺熟睡：完全放鬆地打著小呼嚕，呼吸平穩...", anim: "Survey", orbit: "-45deg 80deg 2.1m", rot: false },
             { text: "🌙 [{time}] 四腳朝天：毫無防備地睡到翻過去，曬著肚皮...", anim: "Survey", orbit: "0deg 90deg 2.2m", rot: false },
             { text: "🌙 [{time}] 深夜微醒：張開眼舔舔爪子，翻身換姿勢繼續睡...", anim: "Survey", orbit: "135deg 75deg 2.3m", rot: false },
             { text: "🌙 [{time}] 清晨淺眠：天色微亮，小耳朵動了動，聽著環境音...", anim: "Survey", orbit: "-135deg 80deg 2.0m", rot: false },
-
             { text: "⏰ [{time}] 晨間甦醒：Lucky 爬了起來，在客廳地墊上伸大懶腰...", anim: "Walk", orbit: "0deg 75deg 2.5m", rot: true, speed: "20deg/sec" },
-            { text: "🍲 [{time}] 清晨進食：開心地在飯碗旁邊小碎步踱步等早餐...", anim: "Walk", orbit: "30deg 70deg 2.3m", rot: true, speed: "30deg/sec" },
+            { text: "🍲 [{time}] 清晨進食：開心地在飯碗旁邊小碎步踱步等早餐...", anim: "Walk", orbit: "30deg 70deg 2.3m", rot: true, speed: "35deg/sec" },
             { text: "🚪 [{time}] 玄關目送：乖巧地坐在玄關，目不轉睛地目送主人出門...", anim: "Survey", orbit: "0deg 75deg 2.2m", rot: false },
-
             { text: "☀️ [{time}] 上午小憩：客廳很安靜，趴在沙發上有一下沒一下地打瞌睡...", anim: "Survey", orbit: "60deg 80deg 2.4m", rot: false },
             { text: "🐾 [{time}] 家中巡邏：獨自在家漫步，把廚房、客廳仔細巡視一圈...", anim: "Walk", orbit: "0deg 75deg 2.6m", rot: true, speed: "25deg/sec" },
             { text: "💧 [{time}] 補充水分：走到牠的小水盆旁邊，優雅地舔水喝...", anim: "Walk", orbit: "-60deg 75deg 2.1m", rot: false },
-
-            { text: "🍲 [{time}] 中午探險：在餐桌附近繞圈走動，尋找掉落的零食...", anim: "Walk", orbit: "0deg 70deg 2.4m", rot: true, speed: "30deg/sec" },
+            { text: "🍲 [{time}] 中午探險：在餐桌附近繞圈走動，尋找掉落的零食...", anim: "Walk", orbit: "0deg 70deg 2.4m", rot: true, speed: "40deg/sec" },
             { text: "☀️ [{time}] 午後大午睡：挪到陽光底下舒服熟睡...", anim: "Survey", orbit: "120deg 85deg 2.3m", rot: false },
-
-            { text: "⚡ [{time}] 下午瘋狂玩耍：叼著最心愛的球在客廳瘋狂來回奔跑！", anim: "Run", orbit: "0deg 65deg 2.7m", rot: true, speed: "180deg/sec" },
-            { text: "⚡ [{time}] 自嗨拆家：極度興奮！叼著小襪子繞著茶几瘋狂衝刺甩頭...", anim: "Run", orbit: "45deg 60deg 2.5m", rot: true, speed: "240deg/sec" },
-
+            { text: "⚡ [{time}] 下午瘋狂玩耍：活力充沛！正在客廳開心地小奔跑玩耍！", anim: "Run", orbit: "0deg 65deg 2.7m", rot: true, speed: "160deg/sec" },
+            { text: "⚡ [{time}] 自嗨拆家：極度興奮！叼著小襪子繞著茶几瘋狂衝刺甩頭...", anim: "Run", orbit: "45deg 60deg 2.5m", rot: true, speed: "220deg/sec" },
             { text: "🧸 [{time}] 玩累放空：跑累了，趴在客廳中央喘氣放空...", anim: "Survey", orbit: "0deg 75deg 2.4m", rot: false },
             { text: "🚪 [{time}] 傍晚等門：守在玄關，聽到電梯聲就豎起耳朵...", anim: "Survey", orbit: "15deg 75deg 2.1m", rot: false },
             { text: "🚪 [{time}] 期待下班：一動不動地坐在門口，盯著大門把手看...", anim: "Survey", orbit: "0deg 75deg 2.2m", rot: false },
-
-            { text: "🎉 [{time}] 歡迎回家！爸爸媽媽進門了！興奮地圍繞腳邊狂奔！", anim: "Run", orbit: "0deg 65deg 2.5m", rot: true, speed: "200deg/sec" },
-            { text: "🛋️ [{time}] 夜間陪伴：全家人吃飽飯，開心地在客廳踱步、狂搖尾巴...", anim: "Walk", orbit: "90deg 70deg 2.4m", rot: true, speed: "40deg/sec" },
+            { text: "🎉 [{time}] 歡迎回家！爸爸媽媽進門了！興奮地圍繞腳邊狂奔！", anim: "Run", orbit: "0deg 65deg 2.5m", rot: true, speed: "180deg/sec" },
+            { text: "🛋️ [{time}] 夜間陪伴：全家人吃飽飯，開心地在客廳踱步、狂搖尾巴...", anim: "Walk", orbit: "90deg 70deg 2.4m", rot: true, speed: "50deg/sec" },
             { text: "🛋️ [{time}] 沙發討摸：賴在爸爸腳邊翻肚子撒嬌，享受溫馨時光...", anim: "Walk", orbit: "-90deg 75deg 2.3m", rot: true, speed: "15deg/sec" },
-
             { text: "🌙 [{time}] 睏意來襲：大燈關了，趴在沙發死角連連打哈欠...", anim: "Survey", orbit: "-45deg 80deg 2.2m", rot: false },
             { text: "🌙 [{time}] 準備就寢：走回溫暖小窩，踩踩毛毯準備睡覺...", anim: "Walk", orbit: "180deg 80deg 2.1m", rot: false }
         ];
 
         function initSystem() {
-            // 每秒刷新時間
+            // 每秒刷新即時時間顯示
             setInterval(() => {
                 if (!isManualMode) {
                     const now = new Date();
                     document.getElementById('time-display').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                    updateModelData(now);
+                    updateModelBehavior(now);
                 }
             }, 1000);
-            updateModelData(new Date());
+            updateModelBehavior(new Date());
         }
 
-        // 核心更新引擎：防止頻繁改動導致 3D 當機
-        function updateModelData(timeObj) {
+        // 根據時間更新模型與文字狀態
+        function updateModelBehavior(timeObj) {
             const hour = timeObj.getHours();
             const min = timeObj.getMinutes();
             const quarter = Math.floor(min / 15) * 15;
             const timeStr = `${hour < 10 ? '0'+hour : hour}:${quarter === 0 ? '00' : quarter}`;
             
             const config = hourConfigs[hour];
-
-            // 1. 文字可以毫無顧忌地隨時刷新
             habitText.innerText = config.text.replace("{time}", timeStr);
 
-            // 2. 3D 模型屬性「只有在跨越到不同的小時」時才允許變動，徹底根除死機！
-            if (hour !== lastRenderedHour) {
-                lastRenderedHour = hour; // 上鎖
-
+            // 精確指派動作與視角
+            if (model) {
                 model.animationName = config.anim;
                 model.cameraOrbit = config.orbit;
 
@@ -165,10 +153,9 @@
             }
         }
 
-        // 拖動時間軸事件
+        // 監聽滑桿變動
         function handleSliderChange(val) {
             const stepsBack = parseInt(val);
-            
             if (stepsBack === 0) {
                 isManualMode = false;
                 sliderHourTxt.innerText = "現在（LIVE）";
@@ -178,11 +165,10 @@
                 
                 const now = new Date();
                 document.getElementById('time-display').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                updateModelData(now);
+                updateModelBehavior(now);
             } else {
                 isManualMode = true;
                 const targetTime = new Date();
-                // 往回倒退精確的時間
                 targetTime.setMinutes(targetTime.getMinutes() + (stepsBack * 15));
                 
                 document.getElementById('time-display').innerText = targetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'00'});
@@ -196,22 +182,19 @@
                 modeBadge.innerText = "LOG";
                 modeBadge.className = "bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider";
                 
-                updateModelData(targetTime);
+                updateModelBehavior(targetTime);
             }
         }
 
-        // 📞 呼喚 Lucky：強制定格、大鏡頭特寫、抬頭叫兩聲
+        // 📞 呼喚功能
         function triggerCall() {
             isManualMode = true; 
             habitText.innerText = '📞 視訊已接通 ‧ Lucky 聽到了爸爸的聲音！立刻停下動作，正原地抬頭對你叫了兩聲！';
-            
-            // 強制解鎖效能保護，逼迫 3D 播放器立刻反應
-            lastRenderedHour = -999; 
-            
-            model.animationName = "Survey";        
-            model.removeAttribute('auto-rotate');  
-            model.cameraOrbit = "0deg 75deg 1.8m"; 
-
+            if (model) {
+                model.animationName = "Survey";        
+                model.removeAttribute('auto-rotate');  
+                model.cameraOrbit = "0deg 75deg 1.8m"; 
+            }
             const audio = new Audio('https://www.w3schools.com/html/horse.mp3');
             audio.play().catch(e => console.log("聲音解鎖"));
         }
